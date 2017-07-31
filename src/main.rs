@@ -2,14 +2,15 @@ extern crate specs;
 #[macro_use]
 extern crate specs_derive;
 
-use specs::Component; 
+//use specs::Component; 
 use specs::VecStorage;
 use specs::World;
 use specs::System;
 use specs::ReadStorage;
 use specs::WriteStorage;
-use specs::RunNow;
+//use specs::RunNow;
 use specs::DispatcherBuilder;
+use specs::Fetch;
 
 #[derive(Component, Debug)]
 #[component(VecStorage)]
@@ -53,10 +54,32 @@ impl<'a> System<'a> for UpdatePos {
     }
 }
 
+struct DeltaTime(f32);
+
+struct PosUpdate;
+
+impl<'a> System<'a> for PosUpdate {
+    type SystemData = (Fetch<'a, DeltaTime>, 
+        ReadStorage<'a, Velocity>,
+        WriteStorage<'a, Position>);
+    fn run(&mut self, data: Self::SystemData) {
+        use specs::Join;
+        let (delta, vel, mut pos) = data;
+        let delta = delta.0;
+        for (vel, pos) in (&vel, &mut pos).join() {
+            pos.x += vel.x * delta;
+            pos.y += vel.y * delta;
+            println!("Vel, {:?}", pos);
+
+        }
+    }
+}
+
 fn main() {
     let mut world = World::new();
     world.register::<Position>();
     world.register::<Velocity>();
+    world.add_resource(DeltaTime(0.04));
 
     let _ = world.create_entity().with(Position { x: 4.0, y: 7.0 }).build();
     let _ = world.create_entity()
@@ -68,7 +91,7 @@ fn main() {
     
     let mut dispatcher = DispatcherBuilder::new()
         .add(HelloWorld, "hello_world", &[])
-        .add(UpdatePos, "update_pos", &["hello_world"])
+        .add(PosUpdate, "pos_update", &["hello_world"])
         .build();
     dispatcher.dispatch(&mut world.res);
 
