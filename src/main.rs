@@ -48,6 +48,7 @@ impl<'a> System<'a> for UpdatePos {
         for (vel, pos) in (&vel, &mut pos).join() {
             pos.x += vel.x * 0.05;
             pos.y += vel.y * 0.05;
+            println!("Vel, {:?}", pos);
         }
     }
 }
@@ -55,15 +56,20 @@ impl<'a> System<'a> for UpdatePos {
 fn main() {
     let mut world = World::new();
     world.register::<Position>();
+    world.register::<Velocity>();
 
-    let ball = world.create_entity().with(Position { x: 4.0, y: 7.0 }).build();
-    let mut hello_world = HelloWorld;
+    let _ = world.create_entity().with(Position { x: 4.0, y: 7.0 }).build();
+    let _ = world.create_entity()
+        .with(Position { x: 8.0, y: 2.0 })
+        .with(Velocity { x: 5.0, y: 3.5 }).build();
+
+    //let mut hello_world = HelloWorld;
     //hello_world.run_now(&world.res);
     
     let mut dispatcher = DispatcherBuilder::new()
-        .add(hello_world, "hello_world", &[])
+        .add(HelloWorld, "hello_world", &[])
+        .add(UpdatePos, "update_pos", &["hello_world"])
         .build();
-    
-
+    dispatcher.dispatch(&mut world.res);
 
 }
